@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1553521003045.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "953961745",
+    "id" : "A2CB395",
+    "lastKnownWriteTime" : 1553536302,
+    "last_content_update" : 1553536302971,
+    "path" : "E:/cep/iCep.R",
+    "project_path" : "iCep.R",
+    "properties" : {
+        "cursorPosition" : "34,0",
+        "scrollLine" : "14",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
