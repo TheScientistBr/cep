@@ -4,6 +4,7 @@ library("stringr")
 require("sqldf")
 library("openxlsx")
 library("tm")
+library("data.table")
 
 files <- list.files(path = "correios",pattern = "LOG_LOGRADOURO*")
 bairro <- read.delim("correios/LOG_BAIRRO.TXT", header=F, stringsAsFactors=FALSE,sep = "@")
@@ -19,28 +20,19 @@ names(ceps) <- c("LOG_NU","UFE_SG","LOC_NU","BAI_NU_INI","BAI_NU_FIM","LOG_NO","
 head(ceps)
 remove(cep,file,files)
 
-conEnd <- function(myQuery) {
-        myQuery <- paste0("select * from ceps where LOG_NO LIKE ","'",myQuery,"'")
-        ender <- sqldf(myQuery)
-        bairr <- conBairro(ender$BAI_NU_INI)
-        response <- data.frame(endereco=paste(ender$TLO_TX, ender$LOG_NO), bairro=bairr$BAI_NO, uf=ender$UFE_SG, cep=ender$CEP)
-        return(response)
-}
-
+bairro <- data.table(bairro,key = "BAI_NU",stringsAsFactors = F)
 conBairro <- function(myBairro) {
-        myBairro <- paste0("select * from bairro where BAI_NU LIKE ","'",myBairro,"'")
-        response <- sqldf(myBairro)
-        return(response)
+        bairro[which(bairro$BAI_NU == myBairro),]
 }
 
+ceps <- data.table(ceps,key = "CEP",stringsAsFactors = F)
 findByCEP <- function(myQuery) {
-        myQuery <- paste0("select * from ceps where CEP LIKE ","'",myQuery,"'")
-        sqldf(myQuery)
+        ceps[which(ceps$CEP == myQuery),]
 }
 
+localidade <- data.table(localidade,key = "LOC_NU",stringsAsFactors = F)
 findByLOC <- function(myQuery) {
-        myQuery <- paste0("select * from localidade where LOC_NU LIKE ","'",myQuery,"'")
-        return(sqldf(myQuery))
+        localidade[which(localidade$LOC_NU == myQuery),]
 }
 
 newXLS <- data.frame()
@@ -50,25 +42,36 @@ localidade <- read.csv(file = "correios/LOG_LOCALIDADE.txt",header = F,sep = "@"
 names(localidade) <- c("LOC_NU","UFE_SG","LOC_NO","CEP",
                        "LOC_IN_SIT","LOC_IN_TIPO_LOC","LOC_NU_SUB",
                        "LOC_NO_ABREV","MUN_NU")
-
+erros <- 0
+file.remove("data/newXLS.csv")
 for(i in 1:dim(xls)[1]) {
         df <- xls[i,]
+        if(sapply(strsplit(df$Endereco, " "), length) < 3) {
+                write.table(x = df, file = "data/newXLS.csv", sep = ",", append = TRUE, quote = FALSE,
+                            col.names = FALSE, row.names = FALSE)
+                erros <- erros +1
+                next
+        }
+        df$Endereco <- str_trim(string = df$Endereco,side = "both")
         adr <- word(df$Endereco,1)
         adr <- str_remove(df$Endereco,adr)
-        x <- word(adr,-1)
+        if(sapply(strsplit(df$Endereco, " "), length) > 2) {
+                x <- word(adr,-1)
+        }
         adr <- str_remove(adr,x)
         documents <- Corpus(VectorSource(adr))
         adr = tm_map(documents, removePunctuation)$content
         adr <- str_trim(string = adr,side = "both")
         newCEP <- findByCEP(df$CEP)
-        new_adr <- conEnd(adr)
-        df$Endereco <- paste(newCEP$TLO_TX,newCEP$LOG_NO,x)
-        df$Bairro <- as.character(conBairro(myBairro = newCEP$BAI_NU_INI)[4])
-        df$Descricao_Cidade <- as.character(findByLOC(newCEP$LOC_NU)[3])
-        newXLS <- rbind(newXLS,df)
+        if(nchar(newCEP$LOG_NU) < 1) {
+                write.table(x = df, file = "data/newXLS.csv", sep = ";", append = TRUE, quote = FALSE,
+                            col.names = FALSE, row.names = FALSE)
+                erros <- erros +1
+                next                
+        }
+        df$Endereco <- paste(newCEP$TLO_TX,newCEP$LOG_NO,", ",x)
+        df$Bairro <- as.character(conBairro(myBairro = newCEP$BAI_NU_INI)[,4])
+        df$Descricao_Cidade <- as.character(findByLOC(newCEP$LOC_NU)[,3])
+        write.table(x = df, file = "data/newXLS.csv", sep = ";", append = TRUE, quote = FALSE,
+                    col.names = FALSE, row.names = FALSE)
 }
-
-
-write.csv(x = newXLS,file = "data/newXLS.csv")
-
-
