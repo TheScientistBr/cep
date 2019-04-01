@@ -47,7 +47,7 @@ file.remove("data/newXLS.csv")
 for(i in 1:dim(xls)[1]) {
         df <- xls[i,]
         if(sapply(strsplit(df$Endereco, " "), length) < 3) {
-                write.table(x = df, file = "data/newXLS.csv", sep = ",", append = TRUE, quote = FALSE,
+                write.table(x = df, file = "data/newXLSErr.csv", sep = ",", append = TRUE, quote = FALSE,
                             col.names = FALSE, row.names = FALSE)
                 erros <- erros +1
                 next
@@ -55,16 +55,17 @@ for(i in 1:dim(xls)[1]) {
         df$Endereco <- str_trim(string = df$Endereco,side = "both")
         adr <- word(df$Endereco,1)
         adr <- str_remove(df$Endereco,adr)
-        if(sapply(strsplit(df$Endereco, " "), length) > 2) {
-                x <- word(adr,-1)
-        }
-        adr <- str_remove(adr,x)
         documents <- Corpus(VectorSource(adr))
         adr = tm_map(documents, removePunctuation)$content
         adr <- str_trim(string = adr,side = "both")
+        if(sapply(strsplit(adr, " "), length) > 2) {
+                x <- word(adr,-1)
+        }
+        adr <- str_remove(adr,x)
+        adr <- str_trim(string = adr,side = "both")
         newCEP <- findByCEP(df$CEP)
-        if(nchar(newCEP$LOG_NU) < 1) {
-                write.table(x = df, file = "data/newXLS.csv", sep = ";", append = TRUE, quote = FALSE,
+        if(length(newCEP$LOG_NU) == 0) {
+                write.table(x = df, file = "data/newXLSErr.csv", sep = ";", append = TRUE, quote = FALSE,
                             col.names = FALSE, row.names = FALSE)
                 erros <- erros +1
                 next                
