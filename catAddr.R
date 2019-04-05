@@ -1,19 +1,28 @@
 library("data.table")
-xls <- read.xlsx(xlsxFile = "data/Base_Endereco0219.xlsx",sheet = 1)
-names(xls) <- c("id","end","compl","bairro","cidade","cep")
+library("openxlsx")
 
-df <- read.csv("data/newXLS.csv",header = F,sep = ";",stringsAsFactors = F)
-names(df) <- c("id","end","compl","bairro","cidade","cep")
+orig <- read.xlsx(xlsxFile = "data/Base_Endereco0219.xlsx",sheet = 1)
+names(orig) <- c("id","end","compl","bairro","cidade","cep")
 
-erro <- read.csv("data/newXLSErr.csv",header = F,sep = ";",stringsAsFactors = F)
-names(erro) <- c("id","end","compl","bairro","cidade","cep")
+gooddf <- read.csv("data/newXLS.csv",header = F,sep = ";",stringsAsFactors = F)
+names(gooddf) <- c("id","end","compl","bairro","cidade","cep")
+gooddf$id <- as.character(gooddf$id)
 
-df$flag <- "ok"
-erro$flag <- "cep"
+errdf <- read.csv("data/newXLSErr.csv",header = F,sep = ";",stringsAsFactors = F)
+names(errdf) <- c("id","end","compl","bairro","cidade","cep")
+
+gooddf$flag <- "ok"
+errdf$flag <- "cep"
 
 
-newdf <- merge.data.frame(x = xls,y = df,by = id)
+newdf <- rbind(gooddf,errdf)
+
+norig <- merge.data.frame(x = orig,y = newdf,by = "id")
+norig$id <- as.character(norig$id)
+orig$id <- as.character(orig$id)
 
 library("dplyr")
 library("sqldf")
-newdf <- left_join(xls,df,by = "id")
+norig <- left_join(orig,newdf,by = c("id","cep"))
+
+dfERR <- unique(df)

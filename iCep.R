@@ -30,6 +30,11 @@ findByCEP <- function(myQuery) {
         ceps[which(ceps$CEP == myQuery),]
 }
 
+localidade <- read.csv(file = "correios/LOG_LOCALIDADE.txt",header = F,sep = "@",stringsAsFactors = F)
+names(localidade) <- c("LOC_NU","UFE_SG","LOC_NO","CEP",
+                       "LOC_IN_SIT","LOC_IN_TIPO_LOC","LOC_NU_SUB",
+                       "LOC_NO_ABREV","MUN_NU")
+
 localidade <- data.table(localidade,key = "LOC_NU",stringsAsFactors = F)
 findByLOC <- function(myQuery) {
         localidade[which(localidade$LOC_NU == myQuery),]
@@ -38,13 +43,11 @@ findByLOC <- function(myQuery) {
 newXLS <- data.frame()
 xls <- read.xlsx(xlsxFile = "data/Base_Endereco0219.xlsx",sheet = 1)
 
-localidade <- read.csv(file = "correios/LOG_LOCALIDADE.txt",header = F,sep = "@",stringsAsFactors = F)
-names(localidade) <- c("LOC_NU","UFE_SG","LOC_NO","CEP",
-                       "LOC_IN_SIT","LOC_IN_TIPO_LOC","LOC_NU_SUB",
-                       "LOC_NO_ABREV","MUN_NU")
 erros <- 0
 file.remove("data/newXLS.csv")
-for(i in 1:dim(xls)[1]) {
+file.remove("data/newXLSErr.csv")
+
+for(i in 1:100000) {
         df <- xls[i,]
         if(sapply(strsplit(df$Endereco, " "), length) < 3) {
                 write.table(x = df, file = "data/newXLSErr.csv", sep = ",", append = TRUE, quote = FALSE,
@@ -70,9 +73,11 @@ for(i in 1:dim(xls)[1]) {
                 erros <- erros +1
                 next                
         }
-        df$Endereco <- paste(newCEP$TLO_TX,newCEP$LOG_NO,", ",x)
+        df$Endereco <- paste0(newCEP$TLO_TX," ",newCEP$LOG_NO,", ",x)
         df$Bairro <- as.character(conBairro(myBairro = newCEP$BAI_NU_INI)[,4])
         df$Descricao_Cidade <- as.character(findByLOC(newCEP$LOC_NU)[,3])
+        df$Identificador_Beneficiario <- as.character(df$Identificador_Beneficiario)
         write.table(x = df, file = "data/newXLS.csv", sep = ";", append = TRUE, quote = FALSE,
                     col.names = FALSE, row.names = FALSE)
 }
+  
